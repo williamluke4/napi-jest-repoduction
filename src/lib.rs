@@ -3,9 +3,10 @@
 #[macro_use]
 extern crate napi_derive;
 
+use std::env;
 use std::convert::TryInto;
 
-use napi::{CallContext, Env, JsNumber, JsObject, Result, Task};
+use napi::{CallContext, Env, JsNumber, JsObject, JsString, Result, Task};
 
 #[cfg(all(
   unix,
@@ -44,6 +45,8 @@ fn init(mut exports: JsObject) -> Result<()> {
   exports.create_named_method("sync", sync_fn)?;
 
   exports.create_named_method("sleep", sleep)?;
+  exports.create_named_method("envTest", env_test)?;
+
   Ok(())
 }
 
@@ -60,4 +63,12 @@ fn sleep(ctx: CallContext) -> Result<JsObject> {
   let task = AsyncTask(argument);
   let async_task = ctx.env.spawn(task)?;
   Ok(async_task.promise_object())
+}
+
+#[js_function(1)]
+fn env_test(ctx: CallContext) -> Result<JsString> {
+  let input_string = ctx.get::<JsString>(0)?.into_utf8().unwrap();
+  let val = input_string.as_str().unwrap();
+  let var = env::var(&val).unwrap();
+  ctx.env.create_string(var.as_str())
 }
